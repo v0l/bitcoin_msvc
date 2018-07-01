@@ -1,0 +1,6 @@
+[submodule "bitcoin"]
+	path = bitcoin
+	url = https://github.com/v0l/bitcoin
+[submodule "libevent"]
+	path = libevent
+	url = https://github.com/libevent/libevent
