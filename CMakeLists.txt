@@ -9,7 +9,7 @@ find_package(Boost COMPONENTS system filesystem chrono program_options unit_test
 
 #find a file from one of the pacakges, this will be the /installed/ dir for vcpkg
 find_path(VCPKG_DIR "event2/buffer.h")
-include_directories("${PROJECT_BINARY_DIR}" "${VCPKG_DIR}" "patch" "bitcoin/src" "bitcoin/src/leveldb/include" "bitcoin/src/leveldb/helpers/memenv" "bitcoin/src/univalue/include" "bitcoin/src/secp256k1/include" "libevent/include")
+include_directories("${PROJECT_BINARY_DIR}" "${VCPKG_DIR}" "patch" "bitcoin/src" "bitcoin/src/univalue/include" "bitcoin/src/secp256k1/include" "libevent/include")
 
 set(CLIENT_VERSION_MAJOR 0)
 set(CLIENT_VERSION_MINOR 16)
@@ -29,7 +29,7 @@ add_definitions(
 	-DENABLE_ZMQ=0
 )
 
-add_subdirectory("bitcoin/src/leveldb")
+#add_subdirectory("bitcoin/src/leveldb")
 add_subdirectory("bitcoin/src/secp256k1")
 add_subdirectory("bitcoin/src/univalue")
 
@@ -327,6 +327,7 @@ add_library(libbitcoin_cli
 find_library(LD_BDB libdb48)
 find_library(LD_FIND_LIBEAY libeay32)
 find_library(LD_FIND_SSL ssleay32)
+find_library(LD_LEVELDB libleveldb)
 
 set(LD_BOOST Boost::system Boost::filesystem Boost::chrono Boost::program_options Boost::thread)
 set(LD_LIBEVENT	Ws2_32 event event_core event_extra)
@@ -347,7 +348,8 @@ target_link_libraries(bitcoind
 	${LIB_ZMQ}
 	libbitcoin_consensus
 	libbitcoin_crypto_base
-	leveldb
+	Shlwapi
+	${LD_LEVELDB}
 	secp256k1
 	${LD_BOOST}
 	${LD_BDB}
@@ -373,5 +375,6 @@ target_link_libraries(bitcoin-tx
 	libbitcoin_crypto_base
 	secp256k1
 	${LD_BOOST}
+	${LD_SSL}
 	${LD_LIBEVENT}
 )
