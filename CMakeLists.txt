@@ -1,8 +1,15 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.11)
 project (bitcoin)
 
-include_directories("${PROJECT_BINARY_DIR}" "$ENV{BOOST_DIR}" "$ENV{OPENSSL_ROOT_DIR}/include" "bitcoin/src" "bitcoin/src/leveldb/include" "bitcoin/src/leveldb/helpers/memenv" "bitcoin/src/univalue/include" "bitcoin/src/secp256k1/include" "libevent/include")
-link_directories("$ENV{BOOST_DIR}/lib64-msvc-14.1" "libevent/build/lib/Release")
+exec_program("git" "bitcoin/" ARGS "describe" "--always" OUTPUT_VARIABLE GIT_COMMIT_ID)
+
+find_package(Libevent REQUIRED)
+find_package(Openssl REQUIRED)
+find_package(Boost COMPONENTS system filesystem chrono program_options unit_test_framework thread signals REQUIRED)
+
+#find a file from one of the pacakges, this will be the /installed/ dir for vcpkg
+find_path(VCPKG_DIR "event2/buffer.h")
+include_directories("${PROJECT_BINARY_DIR}" "${VCPKG_DIR}" "patch" "bitcoin/src" "bitcoin/src/leveldb/include" "bitcoin/src/leveldb/helpers/memenv" "bitcoin/src/univalue/include" "bitcoin/src/secp256k1/include" "libevent/include")
 
 set(CLIENT_VERSION_MAJOR 0)
 set(CLIENT_VERSION_MINOR 16)
@@ -18,107 +25,353 @@ configure_file("bitcoin-config.h.in" "${PROJECT_BINARY_DIR}/config/bitcoin-confi
 add_definitions(
 	-DHAVE_CONFIG_H
 	-DHAVE_WORKING_BOOST_SLEEP_FOR
+	-DENABLE_WALLET=0
+	-DENABLE_ZMQ=0
 )
 
 add_subdirectory("bitcoin/src/leveldb")
 add_subdirectory("bitcoin/src/secp256k1")
 add_subdirectory("bitcoin/src/univalue")
 
-set(BITCOIN_SRC 
-	bitcoin/src/arith_uint256.h
-    bitcoin/src/chain.h
-    bitcoin/src/chainparams.h
-    bitcoin/src/checkpoints.h
-    bitcoin/src/checkqueue.h
-    bitcoin/src/consensus/consensus.h
-    bitcoin/src/consensus/merkle.h
-    bitcoin/src/consensus/tx_verify.h
-    bitcoin/src/consensus/validation.h
-    bitcoin/src/cuckoocache.h
-    bitcoin/src/hash.h
-    bitcoin/src/index/txindex.h
-    bitcoin/src/init.h
-    bitcoin/src/policy/fees.h
-    bitcoin/src/policy/policy.h
-    bitcoin/src/policy/rbf.h
-    bitcoin/src/pow.h
-    bitcoin/src/primitives/block.h
-    bitcoin/src/primitives/transaction.h
-    bitcoin/src/random.h
-    bitcoin/src/reverse_iterator.h
-    bitcoin/src/script/script.h
-    bitcoin/src/script/sigcache.h
-    bitcoin/src/script/standard.h
-    bitcoin/src/timedata.h
-    bitcoin/src/tinyformat.h
-    bitcoin/src/txdb.h
-    bitcoin/src/txmempool.h
-    bitcoin/src/ui_interface.h
-    bitcoin/src/undo.h
-    bitcoin/src/util.h
-    bitcoin/src/utilmoneystr.h
-    bitcoin/src/utilstrencodings.h
-    bitcoin/src/validationinterface.h
-    bitcoin/src/warnings.h
-	
-	bitcoin/src/addrdb.cpp
-    bitcoin/src/addrman.cpp
-    bitcoin/src/arith_uint256.cpp
-    bitcoin/src/base58.cpp
-    bitcoin/src/bech32.cpp
-    bitcoin/src/blockencodings.cpp
-    bitcoin/src/bloom.cpp
-    bitcoin/src/chain.cpp
-    bitcoin/src/chainparams.cpp
-    bitcoin/src/chainparamsbase.cpp
-    bitcoin/src/checkpoints.cpp
-    bitcoin/src/clientversion.cpp
-    bitcoin/src/coins.cpp
-    bitcoin/src/compressor.cpp
-    bitcoin/src/core_read.cpp
-    bitcoin/src/core_write.cpp
-    bitcoin/src/dbwrapper.cpp
-    bitcoin/src/fs.cpp
-    bitcoin/src/hash.cpp
-    bitcoin/src/httprpc.cpp
-    bitcoin/src/httpserver.cpp
-    bitcoin/src/init.cpp
-    bitcoin/src/key.cpp
-    bitcoin/src/key_io.cpp
-    bitcoin/src/keystore.cpp
-    bitcoin/src/logging.cpp
-    bitcoin/src/merkleblock.cpp
-    bitcoin/src/miner.cpp
-	bitcoin/src/net.cpp
-	bitcoin/src/net_processing.cpp
-	bitcoin/src/netaddress.cpp
-	bitcoin/src/netbase.cpp
-	bitcoin/src/noui.cpp
-	bitcoin/src/pow.cpp
-	bitcoin/src/protocol.cpp
-	bitcoin/src/pubkey.cpp
-	bitcoin/src/random.cpp
-	bitcoin/src/rest.cpp
-	bitcoin/src/scheduler.cpp
-	bitcoin/src/sync.cpp
-	bitcoin/src/threadinterrupt.cpp
-	bitcoin/src/timedata.cpp
-	bitcoin/src/torcontrol.cpp
-	bitcoin/src/txdb.cpp
-	bitcoin/src/txmempool.cpp
-	bitcoin/src/ui_interface.cpp
-	bitcoin/src/uint256.cpp
-	bitcoin/src/util.cpp
-	bitcoin/src/utilmoneystr.cpp
-	bitcoin/src/utilstrencodings.cpp
-	bitcoin/src/utiltime.cpp
-	bitcoin/src/validation.cpp
-	bitcoin/src/validationinterface.cpp
-	bitcoin/src/versionbits.cpp
-	bitcoin/src/warnings.cpp
+option(BUILD_USE_ZMQ "Enable ZMQ support" OFF)
+option(ENABLE_WALLET "Enable wallet support" OFF)
+
+set(BITCOIN_CORE_H 
+	bitcoin/src/addrdb.h 
+	bitcoin/src/addrman.h 
+	bitcoin/src/base58.h 
+	bitcoin/src/bech32.h 
+	bitcoin/src/bloom.h 
+	bitcoin/src/blockencodings.h 
+	bitcoin/src/chain.h 
+	bitcoin/src/chainparams.h 
+	bitcoin/src/chainparamsbase.h 
+	bitcoin/src/chainparamsseeds.h 
+	bitcoin/src/checkpoints.h 
+	bitcoin/src/checkqueue.h 
+	bitcoin/src/clientversion.h 
+	bitcoin/src/coins.h 
+	bitcoin/src/compat.h 
+	bitcoin/src/compat/byteswap.h 
+	bitcoin/src/compat/endian.h 
+	bitcoin/src/compat/sanity.h 
+	bitcoin/src/compressor.h 
+	bitcoin/src/consensus/consensus.h 
+	bitcoin/src/consensus/tx_verify.h 
+	bitcoin/src/core_io.h 
+	bitcoin/src/core_memusage.h 
+	bitcoin/src/cuckoocache.h 
+	bitcoin/src/fs.h 
+	bitcoin/src/httprpc.h 
+	bitcoin/src/httpserver.h 
+	bitcoin/src/index/base.h 
+	bitcoin/src/index/txindex.h 
+	bitcoin/src/indirectmap.h 
+	bitcoin/src/init.h 
+	bitcoin/src/interfaces/handler.h 
+	bitcoin/src/interfaces/node.h 
+	bitcoin/src/interfaces/wallet.h 
+	bitcoin/src/key.h 
+	bitcoin/src/key_io.h 
+	bitcoin/src/keystore.h 
+	bitcoin/src/dbwrapper.h 
+	bitcoin/src/limitedmap.h 
+	bitcoin/src/logging.h 
+	bitcoin/src/memusage.h 
+	bitcoin/src/merkleblock.h 
+	bitcoin/src/miner.h 
+	bitcoin/src/net.h 
+	bitcoin/src/net_processing.h 
+	bitcoin/src/netaddress.h 
+	bitcoin/src/netbase.h 
+	bitcoin/src/netmessagemaker.h 
+	bitcoin/src/noui.h 
+	bitcoin/src/policy/feerate.h 
+	bitcoin/src/policy/fees.h 
+	bitcoin/src/policy/policy.h 
+	bitcoin/src/policy/rbf.h 
+	bitcoin/src/pow.h 
+	bitcoin/src/protocol.h 
+	bitcoin/src/random.h 
+	bitcoin/src/reverse_iterator.h 
+	bitcoin/src/reverselock.h 
+	bitcoin/src/rpc/blockchain.h 
+	bitcoin/src/rpc/client.h 
+	bitcoin/src/rpc/mining.h 
+	bitcoin/src/rpc/protocol.h 
+	bitcoin/src/rpc/server.h 
+	bitcoin/src/rpc/rawtransaction.h 
+	bitcoin/src/rpc/register.h 
+	bitcoin/src/rpc/util.h 
+	bitcoin/src/scheduler.h 
+	bitcoin/src/script/ismine.h 
+	bitcoin/src/script/sigcache.h 
+	bitcoin/src/script/sign.h 
+	bitcoin/src/script/standard.h 
+	bitcoin/src/streams.h 
+	bitcoin/src/support/allocators/secure.h 
+	bitcoin/src/support/allocators/zeroafterfree.h 
+	bitcoin/src/support/cleanse.h 
+	bitcoin/src/support/events.h 
+	bitcoin/src/support/lockedpool.h 
+	bitcoin/src/sync.h 
+	bitcoin/src/threadsafety.h 
+	bitcoin/src/threadinterrupt.h 
+	bitcoin/src/timedata.h 
+	bitcoin/src/torcontrol.h 
+	bitcoin/src/txdb.h 
+	bitcoin/src/txmempool.h 
+	bitcoin/src/ui_interface.h 
+	bitcoin/src/undo.h 
+	bitcoin/src/util.h 
+	bitcoin/src/utilmoneystr.h 
+	bitcoin/src/utiltime.h 
+	bitcoin/src/validation.h 
+	bitcoin/src/validationinterface.h 
+	bitcoin/src/versionbits.h 
+	bitcoin/src/walletinitinterface.h 
+	bitcoin/src/wallet/coincontrol.h 
+	bitcoin/src/wallet/crypter.h 
+	bitcoin/src/wallet/db.h 
+	bitcoin/src/wallet/feebumper.h 
+	bitcoin/src/wallet/fees.h 
+	bitcoin/src/wallet/rpcwallet.h 
+	bitcoin/src/wallet/wallet.h 
+	bitcoin/src/wallet/walletdb.h 
+	bitcoin/src/wallet/walletutil.h 
+	bitcoin/src/wallet/coinselection.h 
+	bitcoin/src/warnings.h 
+	bitcoin/src/zmq/zmqabstractnotifier.h 
+	bitcoin/src/zmq/zmqconfig.h
+	bitcoin/src/zmq/zmqnotificationinterface.h 
+	bitcoin/src/zmq/zmqpublishnotifier.h
 )
 
-add_executable(bitcoind "bitcoin/src/bitcoind.cpp" "${BITCOIN_SRC}")
-add_executable(bitcoin-cli "bitcoin/src/bitcoin-cli.cpp")
-add_executable(bitcoin-tx "bitcoin/src/bitcoin-tx.cpp")
+add_library(libbitcoin_server
+	bitcoin/src/addrdb.cpp 
+	bitcoin/src/addrman.cpp 
+	bitcoin/src/bloom.cpp 
+	bitcoin/src/blockencodings.cpp 
+	bitcoin/src/chain.cpp 
+	bitcoin/src/checkpoints.cpp 
+	bitcoin/src/consensus/tx_verify.cpp 
+	bitcoin/src/httprpc.cpp 
+	bitcoin/src/httpserver.cpp 
+	bitcoin/src/index/base.cpp 
+	bitcoin/src/index/txindex.cpp 
+	bitcoin/src/init.cpp 
+	bitcoin/src/dbwrapper.cpp 
+	bitcoin/src/merkleblock.cpp 
+	bitcoin/src/miner.cpp 
+	bitcoin/src/net.cpp 
+	bitcoin/src/net_processing.cpp 
+	bitcoin/src/noui.cpp 
+	bitcoin/src/policy/fees.cpp 
+	bitcoin/src/policy/policy.cpp 
+	bitcoin/src/policy/rbf.cpp 
+	bitcoin/src/pow.cpp 
+	bitcoin/src/rest.cpp 
+	bitcoin/src/rpc/blockchain.cpp 
+	bitcoin/src/rpc/mining.cpp 
+	bitcoin/src/rpc/misc.cpp 
+	bitcoin/src/rpc/net.cpp 
+	bitcoin/src/rpc/rawtransaction.cpp 
+	bitcoin/src/rpc/server.cpp 
+	bitcoin/src/script/sigcache.cpp 
+	bitcoin/src/timedata.cpp 
+	bitcoin/src/torcontrol.cpp 
+	bitcoin/src/txdb.cpp 
+	bitcoin/src/txmempool.cpp 
+	bitcoin/src/ui_interface.cpp 
+	bitcoin/src/validation.cpp 
+	bitcoin/src/validationinterface.cpp 
+	bitcoin/src/versionbits.cpp 
+	${BITCOIN_CORE_H}
+)
 
+if(BUILD_USE_ZMQ)
+	set(LIB_ZMQ libbitcoin_zmq)
+	add_library(libbitcoin_zmq
+		bitcoin/src/zmq/zmqabstractnotifier.cpp
+		bitcoin/src/zmq/zmqnotificationinterface.cpp
+		bitcoin/src/zmq/zmqpublishnotifier.cpp
+	)
+endif(BUILD_USE_ZMQ)
+
+if(ENABLE_WALLET)
+	set(LIB_WALLET libbitcoin_wallet)
+endif(ENABLE_WALLET)
+
+add_library(libbitcoin_wallet
+	bitcoin/src/interfaces/wallet.cpp 
+	bitcoin/src/wallet/crypter.cpp 
+	bitcoin/src/wallet/db.cpp 
+	bitcoin/src/wallet/feebumper.cpp 
+	bitcoin/src/wallet/fees.cpp 
+	bitcoin/src/wallet/init.cpp 
+	bitcoin/src/wallet/rpcdump.cpp 
+	bitcoin/src/wallet/rpcwallet.cpp 
+	bitcoin/src/wallet/wallet.cpp 
+	bitcoin/src/wallet/walletdb.cpp 
+	bitcoin/src/wallet/walletutil.cpp 
+	bitcoin/src/wallet/coinselection.cpp 
+	${BITCOIN_CORE_H}
+)
+
+add_library(libbitcoin_crypto_base
+	bitcoin/src/crypto/aes.cpp 
+	bitcoin/src/crypto/aes.h 
+	bitcoin/src/crypto/chacha20.h 
+	bitcoin/src/crypto/chacha20.cpp 
+	bitcoin/src/crypto/common.h 
+	bitcoin/src/crypto/hmac_sha256.cpp 
+	bitcoin/src/crypto/hmac_sha256.h 
+	bitcoin/src/crypto/hmac_sha512.cpp 
+	bitcoin/src/crypto/hmac_sha512.h 
+	bitcoin/src/crypto/ripemd160.cpp 
+	bitcoin/src/crypto/ripemd160.h 
+	bitcoin/src/crypto/sha1.cpp 
+	bitcoin/src/crypto/sha1.h 
+	bitcoin/src/crypto/sha256.cpp 
+	bitcoin/src/crypto/sha256.h 
+	bitcoin/src/crypto/sha512.cpp 
+	bitcoin/src/crypto/sha512.h
+)
+
+add_library(libbitcoin_consensus
+	bitcoin/src/amount.h 
+	bitcoin/src/arith_uint256.cpp 
+	bitcoin/src/arith_uint256.h 
+	bitcoin/src/consensus/merkle.cpp 
+	bitcoin/src/consensus/merkle.h 
+	bitcoin/src/consensus/params.h 
+	bitcoin/src/consensus/validation.h 
+	bitcoin/src/hash.cpp 
+	bitcoin/src/hash.h 
+	bitcoin/src/prevector.h 
+	bitcoin/src/primitives/block.cpp 
+	bitcoin/src/primitives/block.h 
+	bitcoin/src/primitives/transaction.cpp 
+	bitcoin/src/primitives/transaction.h 
+	bitcoin/src/pubkey.cpp 
+	bitcoin/src/pubkey.h 
+	bitcoin/src/script/bitcoinconsensus.cpp 
+	bitcoin/src/script/interpreter.cpp 
+	bitcoin/src/script/interpreter.h 
+	bitcoin/src/script/script.cpp 
+	bitcoin/src/script/script.h 
+	bitcoin/src/script/script_error.cpp 
+	bitcoin/src/script/script_error.h 
+	bitcoin/src/serialize.h 
+	bitcoin/src/span.h 
+	bitcoin/src/tinyformat.h 
+	bitcoin/src/uint256.cpp 
+	bitcoin/src/uint256.h 
+	bitcoin/src/utilstrencodings.cpp 
+	bitcoin/src/utilstrencodings.h 
+	bitcoin/src/version.h
+)
+
+add_library(libbitcoin_common
+	bitcoin/src/base58.cpp 
+	bitcoin/src/bech32.cpp 
+	bitcoin/src/chainparams.cpp 
+	bitcoin/src/coins.cpp 
+	bitcoin/src/compressor.cpp 
+	bitcoin/src/core_read.cpp 
+	bitcoin/src/core_write.cpp 
+	bitcoin/src/key.cpp 
+	bitcoin/src/key_io.cpp 
+	bitcoin/src/keystore.cpp 
+	bitcoin/src/netaddress.cpp 
+	bitcoin/src/netbase.cpp 
+	bitcoin/src/policy/feerate.cpp 
+	bitcoin/src/protocol.cpp 
+	bitcoin/src/scheduler.cpp 
+	bitcoin/src/script/ismine.cpp 
+	bitcoin/src/script/sign.cpp 
+	bitcoin/src/script/standard.cpp 
+	bitcoin/src/warnings.cpp 
+	${BITCOIN_CORE_H}
+)
+
+add_library(libbitcoin_util
+	bitcoin/src/support/lockedpool.cpp 
+	bitcoin/src/chainparamsbase.cpp 
+	bitcoin/src/clientversion.cpp 
+	bitcoin/src/compat/glibc_sanity.cpp 
+	bitcoin/src/compat/glibcxx_sanity.cpp 
+	bitcoin/src/compat/strnlen.cpp 
+	bitcoin/src/fs.cpp 
+	bitcoin/src/interfaces/handler.cpp 
+	bitcoin/src/interfaces/node.cpp 
+	bitcoin/src/logging.cpp 
+	bitcoin/src/random.cpp 
+	bitcoin/src/rpc/protocol.cpp 
+	bitcoin/src/rpc/util.cpp 
+	bitcoin/src/support/cleanse.cpp 
+	bitcoin/src/sync.cpp 
+	bitcoin/src/threadinterrupt.cpp 
+	bitcoin/src/util.cpp 
+	bitcoin/src/utilmoneystr.cpp 
+	bitcoin/src/utilstrencodings.cpp 
+	bitcoin/src/utiltime.cpp 
+	${BITCOIN_CORE_H}
+)
+
+add_library(libbitcoin_cli
+	bitcoin/src/rpc/client.cpp
+	${BITCOIN_CORE_H}
+)
+
+find_library(LD_BDB libdb48)
+find_library(LD_FIND_LIBEAY libeay32)
+find_library(LD_FIND_SSL ssleay32)
+
+set(LD_BOOST Boost::system Boost::filesystem Boost::chrono Boost::program_options Boost::thread)
+set(LD_LIBEVENT	Ws2_32 event event_core event_extra)
+set(LD_SSL ${LD_FIND_LIBEAY} ${LD_FIND_SSL})
+set(LD_CRYPTO "")
+
+add_executable(bitcoind bitcoin/src/bitcoind.cpp)
+add_executable(bitcoin-cli bitcoin/src/bitcoin-cli.cpp)
+add_executable(bitcoin-tx bitcoin/src/bitcoin-tx.cpp)
+
+
+target_link_libraries(bitcoind 
+	libbitcoin_server
+	${LIB_WALLET}
+	libbitcoin_common
+	univalue
+	libbitcoin_util
+	${LIB_ZMQ}
+	libbitcoin_consensus
+	libbitcoin_crypto_base
+	leveldb
+	secp256k1
+	${LD_BOOST}
+	${LD_BDB}
+	${LD_SSL}
+	${LD_LIBEVENT}
+)
+
+target_link_libraries(bitcoin-cli
+	libbitcoin_cli
+	univalue
+	libbitcoin_util
+	libbitcoin_crypto_base
+	${LD_BOOST}
+	${LD_SSL}
+	${LD_LIBEVENT}
+)
+
+target_link_libraries(bitcoin-tx
+	univalue
+	libbitcoin_common
+	libbitcoin_util
+	libbitcoin_consensus
+	libbitcoin_crypto_base
+	secp256k1
+	${LD_BOOST}
+	${LD_LIBEVENT}
+)

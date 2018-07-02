@@ -1,0 +1,10 @@
+#ifdef _WIN64
+	#define USE_SCALAR_4X64
+#else
+	#define USE_SCALAR_8X32
+#endif
+
+#define USE_FIELD_5X52 
+#define USE_FIELD_INV_BUILTIN 
+#define USE_SCALAR_INV_BUILTIN 
+#define USE_NUM_NONE

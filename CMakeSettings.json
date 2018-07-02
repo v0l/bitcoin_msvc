@@ -1,0 +1,11 @@
+{
+  "configurations": [{
+    "name": "x86-Debug",
+    "generator": "Visual Studio 15 2017",
+    "configurationType" : "Debug",
+    "variables": [{
+      "name": "CMAKE_TOOLCHAIN_FILE",
+      "value": "%VCPKG_ROOT%\\scripts\\buildsystems\\vcpkg.cmake"
+    }]
+  }]
+}
