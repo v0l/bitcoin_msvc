@@ -1,52 +1,60 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.11)
 project (secp256k1)
 
-include_directories("." "include" "../../../uint128_t") 
-add_definitions(-DUSE_SCALAR_4X64 -DUSE_FIELD_5X52 -DUSE_FIELD_INV_BUILTIN -DUSE_SCALAR_INV_BUILTIN -DUSE_NUM_NONE)
+include_directories(. src include ${PROJECT_BINARY_DIR}) 
+configure_file(libsecp256k1-config.h.in ${PROJECT_BINARY_DIR}/libsecp256k1-config.h)
+add_definitions(-DSECP256K1_BUILD)
 
 add_library(secp256k1 STATIC
-	src/secp256k1.c
+	src/eckey_impl.h
+	src/ecmult.h
+	src/ecmult_const.h
+	src/ecmult_const_impl.h
+	src/ecmult_gen.h
+	src/ecmult_gen_impl.h
+	src/ecmult_impl.h
+	src/field.h
+	src/field_5x52.h
+	src/field_5x52_asm_impl.h
+	src/field_5x52_impl.h
+	src/field_5x52_int128_impl.h
+	src/field_10x26.h
+	src/field_10x26_impl.h
+	src/field_impl.h
+	src/group.h
+	src/group_impl.h
+	src/hash.h
+	src/hash_impl.h
+	src/num.h
+	src/num_gmp.h
+	src/num_gmp_impl.h
+	src/num_impl.h
 	src/scalar.h
-    src/scalar_4x64.h
-    src/scalar_8x32.h
-    src/scalar_low.h
-    src/scalar_impl.h
-    src/scalar_4x64_impl.h
-    src/scalar_8x32_impl.h
-    src/scalar_low_impl.h
-    src/group.h
-    src/group_impl.h
-    src/num_gmp.h
-    src/num_gmp_impl.h
-    src/ecdsa.h
-    src/ecdsa_impl.h
-    src/eckey.h
-    src/eckey_impl.h
-    src/ecmult.h
-    src/ecmult_impl.h
-    src/ecmult_const.h
-    src/ecmult_const_impl.h
-    src/ecmult_gen.h
-    src/ecmult_gen_impl.h
-    src/num.h
-    src/num_impl.h
-    src/field_10x26.h
-    src/field_10x26_impl.h
-    src/field_5x52.h
-    src/field_5x52_impl.h
-    src/field_5x52_int128_impl.h
-    src/field_5x52_asm_impl.h
-    src/java/org_bitcoin_NativeSecp256k1.h
-    src/java/org_bitcoin_Secp256k1Context.h
-    src/util.h
-    src/testrand.h
-    src/testrand_impl.h
-    src/hash.h
-    src/hash_impl.h
-    src/field.h
-    src/field_impl.h
-    src/bench.h
+	src/scalar_4x64.h
+	src/scalar_4x64_impl.h
+	src/scalar_8x32.h
+	src/scalar_8x32_impl.h
+	src/scalar_impl.h
+	src/scalar_low.h
+	src/scalar_low_impl.h
+	src/secp256k1.c
+	src/testrand.h
+	src/testrand_impl.h
+	src/util.h
+	src/basic-config.h
+	src/ecdsa.h
+	src/ecdsa_impl.h
+	src/eckey.h
+	
+	include/secp256k1_recovery.h
+	include/secp256k1.h
+	include/secp256k1_ecdh.h
+	
+	src/modules/recovery/main_impl.h
+	src/modules/ecdh/main_impl.h
+	
     contrib/lax_der_parsing.h
     contrib/lax_der_parsing.c
     contrib/lax_der_privatekey_parsing.h
-    contrib/lax_der_privatekey_parsing.c)
+    contrib/lax_der_privatekey_parsing.c
+)
