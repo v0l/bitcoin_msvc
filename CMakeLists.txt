@@ -368,12 +368,12 @@ target_link_libraries(bitcoin-cli
 )
 
 target_link_libraries(bitcoin-tx
+	secp256k1
 	univalue
 	libbitcoin_common
 	libbitcoin_util
 	libbitcoin_consensus
 	libbitcoin_crypto_base
-	secp256k1
 	${LD_BOOST}
 	${LD_SSL}
 	${LD_LIBEVENT}

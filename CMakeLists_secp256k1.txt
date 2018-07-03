@@ -4,38 +4,38 @@ project (secp256k1)
 include_directories("." "src" "include" "${PROJECT_BINARY_DIR}") 
 configure_file(libsecp256k1-config.h.in ${PROJECT_BINARY_DIR}/libsecp256k1-config.h)
 
-option(USE_ECMULT_STATIC_PRECOMPUTATION "enable precomputed ecmult table for signing (default is yes)" ON)
-option(ENABLE_MODULE_RECOVERY "enable ECDSA pubkey recovery module (default is no)" OFF)
-option(ENABLE_MODULE_ECDH "enable ECDH shared secret computation (experimental)" OFF)
+option(enable_ecmult_precomputed "enable precomputed ecmult table for signing (default is yes)" ON)
+option(enable_recovery "enable ECDSA pubkey recovery module (default is yes)" ON)
+option(enable_ecdh "enable ECDH shared secret computation (experimental)" OFF)
 
-if(ENABLE_MODULE_RECOVERY)
+if(enable_recovery)
 	add_definitions(-DENABLE_MODULE_RECOVERY=1)
-	set(RECOVERY_INCLUDE
+	set(src_include_recovery
 		"include/secp256k1_recovery.h"
 	)
-endif(ENABLE_MODULE_RECOVERY)
+endif(enable_recovery)
 
-if(ENABLE_MODULE_ECDH)
+if(enable_ecdh)
 	add_definitions(-DENABLE_MODULE_ECDH=1)
-	set(ECDH_INCLUDE 
+	set(src_include_ecdh
 		"include/secp256k1_ecdh.h"
 	)
-endif(ENABLE_MODULE_ECDH)
+endif(enable_ecdh)
 
-if(USE_ECMULT_STATIC_PRECOMPUTATION)
+if(enable_ecmult_precomputed)
 	add_executable(secp256k1_gen_context src/gen_context.c)
-	set(ECMULT_STATIC 
-		src/ecmult_static_context.h
+	set(src_include_ecmult_static
+		"src/ecmult_static_context.h"
 	)
-endif(USE_ECMULT_STATIC_PRECOMPUTATION)
+endif(enable_ecmult_precomputed)
 
 add_definitions(-DSECP256K1_BUILD)
 
 add_library(secp256k1 STATIC
-	include/secp256k1.h
-	src/secp256k1.c
-		
-	${RECOVERY_INCLUDE}
-	${ECDH_INCLUDE}
-	${ECMULT_STATIC}
+	"include/secp256k1.h"
+	"src/secp256k1.c"
+	
+	${src_include_recovery}
+	${src_include_ecdh}
+	${src_include_ecmult_static}
 )
