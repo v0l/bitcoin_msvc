@@ -2,6 +2,7 @@
 
 ## Build
 ### Prerequistes
+ - Visual Studio 2017 (haven't tested on any other versions)
  - CMake > 3.11
  - vcpkg (https://github.com/Microsoft/vcpkg)
 
