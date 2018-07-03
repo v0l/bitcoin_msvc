@@ -2,6 +2,7 @@
 	#define USE_SCALAR_4X64
 #else
 	#define USE_SCALAR_8X32
+	typedef unsigned long long uint128_t; //TODO: no uint128_t on msvc.
 #endif
 
 #define USE_FIELD_5X52 

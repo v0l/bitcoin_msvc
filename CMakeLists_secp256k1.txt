@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.11)
 project (secp256k1)
 
-include_directories("." "src" "include" "${PROJECT_BINARY_DIR}") 
-configure_file(libsecp256k1-config.h.in ${PROJECT_BINARY_DIR}/libsecp256k1-config.h)
+include_directories("." "src" "include" "${PROJECT_BINARY_DIR}" "${PROJECT_BINARY_DIR}/src") 
+configure_file("libsecp256k1-config.h.in" "${PROJECT_BINARY_DIR}/libsecp256k1-config.h")
 
 option(enable_ecmult_precomputed "enable precomputed ecmult table for signing (default is yes)" ON)
 option(enable_recovery "enable ECDSA pubkey recovery module (default is yes)" ON)
@@ -23,10 +23,8 @@ if(enable_ecdh)
 endif(enable_ecdh)
 
 if(enable_ecmult_precomputed)
+	file(WRITE "${PROJECT_BINARY_DIR}/src/ecmult_static_context.h" "MISSING CONTENT")
 	add_executable(secp256k1_gen_context src/gen_context.c)
-	set(src_include_ecmult_static
-		"src/ecmult_static_context.h"
-	)
 endif(enable_ecmult_precomputed)
 
 add_definitions(-DSECP256K1_BUILD)
@@ -37,5 +35,11 @@ add_library(secp256k1 STATIC
 	
 	${src_include_recovery}
 	${src_include_ecdh}
-	${src_include_ecmult_static}
 )
+
+if(enable_ecmult_precomputed)
+	add_custom_command(TARGET secp256k1 PRE_BUILD
+		COMMAND COPY ARGS /Y $(OutputPath)secp256k1_gen_context.exe $(ProjectDir)secp256k1_gen_context.exe
+		COMMAND $(ProjectDir)secp256k1_gen_context.exe
+	)
+endif(enable_ecmult_precomputed)
