@@ -1,60 +1,41 @@
 cmake_minimum_required (VERSION 3.11)
 project (secp256k1)
 
-include_directories(. src include ${PROJECT_BINARY_DIR}) 
+include_directories("." "src" "include" "${PROJECT_BINARY_DIR}") 
 configure_file(libsecp256k1-config.h.in ${PROJECT_BINARY_DIR}/libsecp256k1-config.h)
+
+option(USE_ECMULT_STATIC_PRECOMPUTATION "enable precomputed ecmult table for signing (default is yes)" ON)
+option(ENABLE_MODULE_RECOVERY "enable ECDSA pubkey recovery module (default is no)" OFF)
+option(ENABLE_MODULE_ECDH "enable ECDH shared secret computation (experimental)" OFF)
+
+if(ENABLE_MODULE_RECOVERY)
+	add_definitions(-DENABLE_MODULE_RECOVERY=1)
+	set(RECOVERY_INCLUDE
+		"include/secp256k1_recovery.h"
+	)
+endif(ENABLE_MODULE_RECOVERY)
+
+if(ENABLE_MODULE_ECDH)
+	add_definitions(-DENABLE_MODULE_ECDH=1)
+	set(ECDH_INCLUDE 
+		"include/secp256k1_ecdh.h"
+	)
+endif(ENABLE_MODULE_ECDH)
+
+if(USE_ECMULT_STATIC_PRECOMPUTATION)
+	add_executable(secp256k1_gen_context src/gen_context.c)
+	set(ECMULT_STATIC 
+		src/ecmult_static_context.h
+	)
+endif(USE_ECMULT_STATIC_PRECOMPUTATION)
+
 add_definitions(-DSECP256K1_BUILD)
 
 add_library(secp256k1 STATIC
-	src/eckey_impl.h
-	src/ecmult.h
-	src/ecmult_const.h
-	src/ecmult_const_impl.h
-	src/ecmult_gen.h
-	src/ecmult_gen_impl.h
-	src/ecmult_impl.h
-	src/field.h
-	src/field_5x52.h
-	src/field_5x52_asm_impl.h
-	src/field_5x52_impl.h
-	src/field_5x52_int128_impl.h
-	src/field_10x26.h
-	src/field_10x26_impl.h
-	src/field_impl.h
-	src/group.h
-	src/group_impl.h
-	src/hash.h
-	src/hash_impl.h
-	src/num.h
-	src/num_gmp.h
-	src/num_gmp_impl.h
-	src/num_impl.h
-	src/scalar.h
-	src/scalar_4x64.h
-	src/scalar_4x64_impl.h
-	src/scalar_8x32.h
-	src/scalar_8x32_impl.h
-	src/scalar_impl.h
-	src/scalar_low.h
-	src/scalar_low_impl.h
-	src/secp256k1.c
-	src/testrand.h
-	src/testrand_impl.h
-	src/util.h
-	src/basic-config.h
-	src/ecdsa.h
-	src/ecdsa_impl.h
-	src/eckey.h
-	
-	include/secp256k1_recovery.h
 	include/secp256k1.h
-	include/secp256k1_ecdh.h
-	
-	src/modules/recovery/main_impl.h
-	src/modules/ecdh/main_impl.h
-	
-    contrib/lax_der_parsing.h
-    contrib/lax_der_parsing.c
-    contrib/lax_der_privatekey_parsing.h
-    contrib/lax_der_privatekey_parsing.c
+	src/secp256k1.c
+		
+	${RECOVERY_INCLUDE}
+	${ECDH_INCLUDE}
+	${ECMULT_STATIC}
 )
