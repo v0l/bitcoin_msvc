@@ -25,18 +25,16 @@ configure_file("bitcoin-config.h.in" "${PROJECT_BINARY_DIR}/config/bitcoin-confi
 add_definitions(
 	-DHAVE_CONFIG_H
 	-DHAVE_WORKING_BOOST_SLEEP_FOR
-	-DENABLE_WALLET=0
-	-DENABLE_ZMQ=0
 )
 
 #add_subdirectory("bitcoin/src/leveldb")
 add_subdirectory("bitcoin/src/secp256k1")
 add_subdirectory("bitcoin/src/univalue")
 
-option(BUILD_USE_ZMQ "Enable ZMQ support" OFF)
-option(ENABLE_WALLET "Enable wallet support" OFF)
+option(enable_zmq "Enable ZMQ support" OFF)
+option(enable_wallet "Enable wallet support" OFF)
 
-set(BITCOIN_CORE_H 
+set(bitcoin_core_h 
 	bitcoin/src/addrdb.h 
 	bitcoin/src/addrman.h 
 	bitcoin/src/base58.h 
@@ -147,7 +145,7 @@ set(BITCOIN_CORE_H
 	bitcoin/src/zmq/zmqpublishnotifier.h
 )
 
-add_library(libbitcoin_server
+add_library(libbitcoin_server STATIC
 	bitcoin/src/addrdb.cpp 
 	bitcoin/src/addrman.cpp 
 	bitcoin/src/bloom.cpp 
@@ -186,23 +184,25 @@ add_library(libbitcoin_server
 	bitcoin/src/validation.cpp 
 	bitcoin/src/validationinterface.cpp 
 	bitcoin/src/versionbits.cpp 
-	${BITCOIN_CORE_H}
+	${bitcoin_core_h}
 )
 
-if(BUILD_USE_ZMQ)
-	set(LIB_ZMQ libbitcoin_zmq)
-	add_library(libbitcoin_zmq
+if(enable_zmq)
+	set(ld_zmq libbitcoin_zmq)
+	add_definitions(-DENABLE_ZMQ)
+	add_library(libbitcoin_zmq STATIC
 		bitcoin/src/zmq/zmqabstractnotifier.cpp
 		bitcoin/src/zmq/zmqnotificationinterface.cpp
 		bitcoin/src/zmq/zmqpublishnotifier.cpp
 	)
-endif(BUILD_USE_ZMQ)
+endif(enable_zmq)
 
-if(ENABLE_WALLET)
-	set(LIB_WALLET libbitcoin_wallet)
-endif(ENABLE_WALLET)
+if(enable_wallet)
+	add_definitions(-DENABLE_WALLET)
+	set(ld_wallet libbitcoin_wallet)
+endif(enable_wallet)
 
-add_library(libbitcoin_wallet
+add_library(libbitcoin_wallet STATIC
 	bitcoin/src/interfaces/wallet.cpp 
 	bitcoin/src/wallet/crypter.cpp 
 	bitcoin/src/wallet/db.cpp 
@@ -215,10 +215,10 @@ add_library(libbitcoin_wallet
 	bitcoin/src/wallet/walletdb.cpp 
 	bitcoin/src/wallet/walletutil.cpp 
 	bitcoin/src/wallet/coinselection.cpp 
-	${BITCOIN_CORE_H}
+	${bitcoin_core_h}
 )
 
-add_library(libbitcoin_crypto_base
+add_library(libbitcoin_crypto_base STATIC
 	bitcoin/src/crypto/aes.cpp 
 	bitcoin/src/crypto/aes.h 
 	bitcoin/src/crypto/chacha20.h 
@@ -238,7 +238,7 @@ add_library(libbitcoin_crypto_base
 	bitcoin/src/crypto/sha512.h
 )
 
-add_library(libbitcoin_consensus
+add_library(libbitcoin_consensus STATIC
 	bitcoin/src/amount.h 
 	bitcoin/src/arith_uint256.cpp 
 	bitcoin/src/arith_uint256.h 
@@ -272,7 +272,7 @@ add_library(libbitcoin_consensus
 	bitcoin/src/version.h
 )
 
-add_library(libbitcoin_common
+add_library(libbitcoin_common STATIC
 	bitcoin/src/base58.cpp 
 	bitcoin/src/bech32.cpp 
 	bitcoin/src/chainparams.cpp 
@@ -292,10 +292,10 @@ add_library(libbitcoin_common
 	bitcoin/src/script/sign.cpp 
 	bitcoin/src/script/standard.cpp 
 	bitcoin/src/warnings.cpp 
-	${BITCOIN_CORE_H}
+	${bitcoin_core_h}
 )
 
-add_library(libbitcoin_util
+add_library(libbitcoin_util STATIC
 	bitcoin/src/support/lockedpool.cpp 
 	bitcoin/src/chainparamsbase.cpp 
 	bitcoin/src/clientversion.cpp 
@@ -316,23 +316,22 @@ add_library(libbitcoin_util
 	bitcoin/src/utilmoneystr.cpp 
 	bitcoin/src/utilstrencodings.cpp 
 	bitcoin/src/utiltime.cpp 
-	${BITCOIN_CORE_H}
+	${bitcoin_core_h}
 )
 
-add_library(libbitcoin_cli
+add_library(libbitcoin_cli STATIC
 	bitcoin/src/rpc/client.cpp
-	${BITCOIN_CORE_H}
+	${bitcoin_core_h}
 )
 
-find_library(LD_BDB libdb48)
-find_library(LD_FIND_LIBEAY libeay32)
-find_library(LD_FIND_SSL ssleay32)
-find_library(LD_LEVELDB libleveldb)
+find_library(ld_bdb libdb48)
+find_library(ld_find_libeay libeay32)
+find_library(ld_find_ssl ssleay32)
+find_library(ld_leveldb libleveldb)
 
-set(LD_BOOST Boost::system Boost::filesystem Boost::chrono Boost::program_options Boost::thread)
-set(LD_LIBEVENT	Ws2_32 event event_core event_extra)
-set(LD_SSL ${LD_FIND_LIBEAY} ${LD_FIND_SSL})
-set(LD_CRYPTO "")
+set(ld_boost Boost::system Boost::filesystem Boost::chrono Boost::program_options Boost::thread)
+set(ld_libevent Ws2_32 event event_core event_extra)
+set(ld_ssl ${ld_find_libeay} ${ld_find_ssl})
 
 add_executable(bitcoind bitcoin/src/bitcoind.cpp)
 add_executable(bitcoin-cli bitcoin/src/bitcoin-cli.cpp)
@@ -341,20 +340,20 @@ add_executable(bitcoin-tx bitcoin/src/bitcoin-tx.cpp)
 
 target_link_libraries(bitcoind 
 	libbitcoin_server
-	${LIB_WALLET}
+	${ld_wallet}
 	libbitcoin_common
 	univalue
 	libbitcoin_util
-	${LIB_ZMQ}
+	${ld_zmq}
 	libbitcoin_consensus
 	libbitcoin_crypto_base
 	Shlwapi
-	${LD_LEVELDB}
+	${ld_leveldb}
 	secp256k1
-	${LD_BOOST}
-	${LD_BDB}
-	${LD_SSL}
-	${LD_LIBEVENT}
+	${ld_boost}
+	${ld_bdb}
+	${ld_ssl}
+	${ld_libevent}
 )
 
 target_link_libraries(bitcoin-cli
@@ -362,9 +361,9 @@ target_link_libraries(bitcoin-cli
 	univalue
 	libbitcoin_util
 	libbitcoin_crypto_base
-	${LD_BOOST}
-	${LD_SSL}
-	${LD_LIBEVENT}
+	${ld_boost}
+	${ld_ssl}
+	${ld_libevent}
 )
 
 target_link_libraries(bitcoin-tx
@@ -374,7 +373,7 @@ target_link_libraries(bitcoin-tx
 	libbitcoin_util
 	libbitcoin_consensus
 	libbitcoin_crypto_base
-	${LD_BOOST}
-	${LD_SSL}
-	${LD_LIBEVENT}
+	${ld_boost}
+	${ld_ssl}
+	${ld_libevent}
 )
