@@ -112,6 +112,7 @@ set(bitcoin_core_h
 	bitcoin/src/support/cleanse.h 
 	bitcoin/src/support/events.h 
 	bitcoin/src/support/lockedpool.h 
+	bitcoin/src/shutdown.h
 	bitcoin/src/sync.h 
 	bitcoin/src/threadsafety.h 
 	bitcoin/src/threadinterrupt.h 
@@ -175,6 +176,7 @@ add_library(libbitcoin_server STATIC
 	bitcoin/src/rpc/net.cpp 
 	bitcoin/src/rpc/rawtransaction.cpp 
 	bitcoin/src/rpc/server.cpp 
+	bitcoin/src/shutdown.cpp
 	bitcoin/src/script/sigcache.cpp 
 	bitcoin/src/timedata.cpp 
 	bitcoin/src/torcontrol.cpp 

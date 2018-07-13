@@ -1,11 +1,12 @@
 #ifdef _WIN64
 	#define USE_SCALAR_4X64
+	#define USE_FIELD_5X52
 #else
 	#define USE_SCALAR_8X32
-	typedef unsigned long long uint128_t; //TODO: no uint128_t on msvc.
+	#define USE_FIELD_10X26
 #endif
 
-#define USE_FIELD_5X52 
+//bignum is not used
 #define USE_FIELD_INV_BUILTIN 
 #define USE_SCALAR_INV_BUILTIN 
 #define USE_NUM_NONE

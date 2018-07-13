@@ -4,40 +4,93 @@ project (secp256k1)
 include_directories("." "src" "include" "${PROJECT_BINARY_DIR}" "${PROJECT_BINARY_DIR}/src") 
 configure_file("libsecp256k1-config.h.in" "${PROJECT_BINARY_DIR}/libsecp256k1-config.h")
 
+set(incl_uint128 "../../../patch/Int128.h")
+set(incl_uint128_cpp "../../../patch/Int128x86.cpp")
+
 option(enable_ecmult_precomputed "enable precomputed ecmult table for signing (default is yes)" ON)
 option(enable_recovery "enable ECDSA pubkey recovery module (default is yes)" ON)
 option(enable_ecdh "enable ECDH shared secret computation (experimental)" OFF)
+option(enable_external_asm "enable ECDH shared secret computation (experimental)" OFF)
+
+add_definitions(-DSECP256K1_BUILD)
+
+set(incl_all_files 
+	"src/scalar.h"
+	"src/scalar_4x64.h"
+	"src/scalar_8x32.h"
+	"src/scalar_low.h"
+	"src/scalar_impl.h"
+	"src/scalar_4x64_impl.h"
+	"src/scalar_8x32_impl.h"
+	"src/scalar_low_impl.h"
+	"src/group.h"
+	"src/group_impl.h"
+	"src/num_gmp.h"
+	"src/num_gmp_impl.h"
+	"src/ecdsa.h"
+	"src/ecdsa_impl.h"
+	"src/eckey.h"
+	"src/eckey_impl.h"
+	"src/ecmult.h"
+	"src/ecmult_impl.h"
+	"src/ecmult_const.h"
+	"src/ecmult_const_impl.h"
+	"src/ecmult_gen.h"
+	"src/ecmult_gen_impl.h"
+	"src/num.h"
+	"src/num_impl.h"
+	"src/field_10x26.h"
+	"src/field_10x26_impl.h"
+	"src/field_5x52.h"
+	"src/field_5x52_impl.h"
+	"src/field_5x52_int128_impl.h"
+	"src/field_5x52_asm_impl.h"
+	"src/java/org_bitcoin_NativeSecp256k1.h"
+	"src/java/org_bitcoin_Secp256k1Context.h"
+	"src/util.h"
+	"src/testrand.h"
+	"src/testrand_impl.h"
+	"src/hash.h"
+	"src/hash_impl.h"
+	"src/field.h"
+	"src/field_impl.h"
+)
 
 if(enable_recovery)
-	add_definitions(-DENABLE_MODULE_RECOVERY=1)
-	set(src_include_recovery
+	add_definitions(-DENABLE_MODULE_RECOVERY)
+	set(incl_recovery
 		"include/secp256k1_recovery.h"
 	)
 endif(enable_recovery)
 
 if(enable_ecdh)
-	add_definitions(-DENABLE_MODULE_ECDH=1)
-	set(src_include_ecdh
+	add_definitions(-DENABLE_MODULE_ECDH)
+	set(incl_ecdh
 		"include/secp256k1_ecdh.h"
 	)
 endif(enable_ecdh)
 
 if(enable_ecmult_precomputed)
-	file(WRITE "${PROJECT_BINARY_DIR}/src/ecmult_static_context.h" "MISSING CONTENT")
-	add_executable(secp256k1_gen_context src/gen_context.c)
+	file(WRITE "${PROJECT_BINARY_DIR}/src/ecmult_static_context.h" "")
+	add_executable(secp256k1_gen_context
+		"src/gen_context.c"
+	)
 endif(enable_ecmult_precomputed)
 
-add_definitions(-DSECP256K1_BUILD)
-
 add_library(secp256k1 STATIC
-	"include/secp256k1.h"
+	${incl_all_files}
+	"src/bench.h"
+	"contrib/lax_der_parsing.h"
+	"contrib/lax_der_parsing.c"
+	"contrib/lax_der_privatekey_parsing.h"
+	"contrib/lax_der_privatekey_parsing.c"
 	"src/secp256k1.c"
-	
-	${src_include_recovery}
-	${src_include_ecdh}
+	${incl_recovery}
+	${incl_ecdh}
 )
 
 if(enable_ecmult_precomputed)
+	target_compile_definitions(secp256k1 PRIVATE USE_ECMULT_STATIC_PRECOMPUTATION)
 	add_custom_command(TARGET secp256k1 PRE_BUILD
 		COMMAND COPY ARGS /Y $(OutputPath)secp256k1_gen_context.exe $(ProjectDir)secp256k1_gen_context.exe
 		COMMAND $(ProjectDir)secp256k1_gen_context.exe
