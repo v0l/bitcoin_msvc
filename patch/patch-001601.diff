@@ -1,0 +1,65 @@
+diff --git a/src/leveldb/db/c.cc b/src/leveldb/db/c.cc
+index 08ff0ad90..b23e3dcc9 100644
+--- a/src/leveldb/db/c.cc
++++ b/src/leveldb/db/c.cc
+@@ -5,7 +5,9 @@
+ #include "leveldb/c.h"
+ 
+ #include <stdlib.h>
++#ifndef WIN32
+ #include <unistd.h>
++#endif
+ #include "leveldb/cache.h"
+ #include "leveldb/comparator.h"
+ #include "leveldb/db.h"
+diff --git a/src/leveldb/port/port_win.h b/src/leveldb/port/port_win.h
+index e8bf46ef2..989c15cd9 100644
+--- a/src/leveldb/port/port_win.h
++++ b/src/leveldb/port/port_win.h
+@@ -32,9 +32,16 @@
+ #define STORAGE_LEVELDB_PORT_PORT_WIN_H_
+ 
+ #ifdef _MSC_VER
++#if !(_MSC_VER >= 1900)
+ #define snprintf _snprintf
++#endif
+ #define close _close
+ #define fread_unlocked _fread_nolock
++#ifdef _WIN64
++#define ssize_t int64_t
++#else
++#define ssize_t int32_t
++#endif
+ #endif
+ 
+ #include <string>
+diff --git a/src/net_processing.cpp b/src/net_processing.cpp
+index eb5c25804..0afc4e33b 100644
+--- a/src/net_processing.cpp
++++ b/src/net_processing.cpp
+@@ -32,10 +32,6 @@
+ 
+ #include <memory>
+ 
+-#if defined(NDEBUG)
+-# error "Bitcoin cannot be compiled without assertions."
+-#endif
+-
+ std::atomic<int64_t> nTimeBestReceived(0); // Used only to inform the wallet of when we last received a block
+ 
+ struct IteratorComparator
+diff --git a/src/validation.cpp b/src/validation.cpp
+index 2c5b5a1a3..490b3aff2 100644
+--- a/src/validation.cpp
++++ b/src/validation.cpp
+@@ -47,10 +47,6 @@
+ #include <boost/algorithm/string/join.hpp>
+ #include <boost/thread.hpp>
+ 
+-#if defined(NDEBUG)
+-# error "Bitcoin cannot be compiled without assertions."
+-#endif
+-
+ #define MICRO 0.000001
+ #define MILLI 0.001
+ 

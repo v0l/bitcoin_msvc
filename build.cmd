@@ -1,8 +1,12 @@
 @echo off
 
-git clone https://github.com/bitcoin/bitcoin.git
+git clone --branch 0.16 --single-branch https://github.com/bitcoin/bitcoin.git
 
-vcpkg install leveldb libevent openssl berkeleydb boost-system boost-filesystem	boost-chrono boost-program-options boost-test boost-thread boost-signals boost-signals2 boost-multi-index boost-interprocess
+cd bitcoin
+git apply ../patch/patch-001601.diff
+cd ..
+
+vcpkg install libevent openssl berkeleydb boost-system boost-filesystem	boost-chrono boost-program-options boost-test boost-thread boost-signals boost-signals2 boost-multi-index boost-interprocess
 
 copy /Y "CMakeLists_leveldb.txt" "bitcoin/src/leveldb/CMakeLists.txt"
 copy /Y "CMakeLists_secp256k1.txt" "bitcoin/src/secp256k1/CMakeLists.txt"
@@ -13,3 +17,4 @@ mkdir build
 cd build
 
 cmake .. -G "Visual Studio 15 2017" -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%\\scripts\\buildsystems\\vcpkg.cmake"
+cd ..
