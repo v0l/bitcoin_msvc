@@ -23,13 +23,14 @@ include_directories(
 
 set(CLIENT_VERSION_MAJOR 0)
 set(CLIENT_VERSION_MINOR 16)
-set(CLIENT_VERSION_REVISION 1)
+set(CLIENT_VERSION_REVISION 2)
 set(CLIENT_VERSION_BUILD 0)
 set(CLIENT_VERSION_IS_RELEASE true)
 set(COPYRIGHT_YEAR 2018)
 set(PACKAGE_NAME "Bitcoin")
 set(COPYRIGHT_HOLDERS "The %s developers")
 set(COPYRIGHT_HOLDERS_SUBSTITUTION "Bitcoin Core")
+string(REPLACE "%s" ${COPYRIGHT_HOLDERS_SUBSTITUTION} COPYRIGHT_HOLDERS_FINAL ${COPYRIGHT_HOLDERS})
 
 configure_file("bitcoin-config.h.in" "${PROJECT_BINARY_DIR}/config/bitcoin-config.h")
 add_definitions(
@@ -41,8 +42,8 @@ add_subdirectory("bitcoin/src/leveldb")
 add_subdirectory("bitcoin/src/secp256k1")
 add_subdirectory("bitcoin/src/univalue")
 
-option(enable_zmq "Enable ZMQ support" OFF)
-option(enable_wallet "Enable wallet support" OFF)
+option(opt_enable_zmq "Enable ZMQ support" OFF)
+option(opt_enable_wallet "Enable wallet support" ON)
 
 set(bitcoin_core_h 
 	bitcoin/src/addrdb.h 
@@ -189,20 +190,21 @@ add_library(libbitcoin_server STATIC
 	${bitcoin_core_h}
 )
 
-if(enable_zmq)
+if(opt_enable_zmq)
+	find_library(ld_libzmq "libzmq")
 	set(ld_zmq libbitcoin_zmq)
-	add_definitions(-DENABLE_ZMQ)
 	add_library(libbitcoin_zmq STATIC
 		bitcoin/src/zmq/zmqabstractnotifier.cpp
 		bitcoin/src/zmq/zmqnotificationinterface.cpp
 		bitcoin/src/zmq/zmqpublishnotifier.cpp
 	)
-endif(enable_zmq)
+	add_definitions(-DENABLE_ZMQ)
+endif(opt_enable_zmq)
 
-if(enable_wallet)
-	add_definitions(-DENABLE_WALLET)
+if(opt_enable_wallet)
 	set(ld_wallet libbitcoin_wallet)
-endif(enable_wallet)
+	add_definitions(-DENABLE_WALLET)
+endif(opt_enable_wallet)
 
 add_library(libbitcoin_wallet STATIC
 	bitcoin/src/wallet/crypter.cpp
@@ -327,17 +329,16 @@ set(ld_boost Boost::system Boost::filesystem Boost::chrono Boost::program_option
 set(ld_libevent Ws2_32 event event_core event_extra)
 set(ld_ssl ${ld_find_libeay} ${ld_find_ssl})
 
-add_executable(bitcoind bitcoin/src/bitcoind.cpp)
+add_executable(bitcoind bitcoin/src/bitcoind.cpp bitcoin/src/bitcoind-res.rc)
 add_executable(bitcoin-cli bitcoin/src/bitcoin-cli.cpp)
 add_executable(bitcoin-tx bitcoin/src/bitcoin-tx.cpp)
 
-
 target_link_libraries(bitcoind 
 	libbitcoin_server
-	${ld_wallet}
 	libbitcoin_common
 	univalue
 	libbitcoin_util
+	${ld_wallet}
 	${ld_zmq}
 	libbitcoin_consensus
 	libbitcoin_crypto_base
@@ -349,6 +350,7 @@ target_link_libraries(bitcoind
 	${ld_bdb}
 	${ld_ssl}
 	${ld_libevent}
+	${ld_libzmq}
 )
 
 target_link_libraries(bitcoin-cli
